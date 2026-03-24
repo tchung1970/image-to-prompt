@@ -1,6 +1,8 @@
 # Image to Prompt
 
-Analyze images and generate detailed AI image-generation prompts using vision models. Available as both a **CLI tool** and a **web application**.
+Analyze images and generate detailed AI image-generation prompts using Google Gemini.
+
+**Live:** https://ai.tchung.org/image-to-prompt/
 
 ## Overview
 
@@ -9,80 +11,14 @@ Given an image, the tool produces a single flowing paragraph prompt capturing su
 ## Requirements
 
 - Python 3.10+
-- API key for at least one provider:
-  - **Google Gemini** (default) — set `GEMINI_API_KEY`
-  - **Anthropic Claude** — set `ANTHROPIC_API_KEY`
-- Keys can be placed in `~/.env` (or a local `.env` for the web app)
-
-### Python Dependencies
-
-| Package | Used by |
-|---------|---------|
-| `google-genai` | CLI (Gemini provider), Web app |
-| `anthropic` | CLI (Anthropic provider) |
-| `flask` | Web app only |
+- `GEMINI_API_KEY` — can be placed in a local `.env` file
+- `google-genai` and `flask` Python packages
 
 ## Supported Image Formats
 
 `.jpg` `.jpeg` `.png` `.gif` `.webp`
 
-## CLI — `image-to-prompt.py`
-
-### Usage
-
-```bash
-# Interactive mode (default provider: Gemini)
-./image-to-prompt.py
-
-# Single image
-./image-to-prompt.py photo.jpg
-
-# Entire directory (recursive)
-./image-to-prompt.py ./photos/
-
-# Use Claude instead of Gemini
-./image-to-prompt.py photo.jpg --provider anthropic
-
-# Override model
-./image-to-prompt.py photo.jpg --model gemini-2.0-flash
-
-# Save output to file
-./image-to-prompt.py ./photos/ -o prompts.txt
-```
-
-### Arguments
-
-| Argument | Description |
-|----------|-------------|
-| `target` | Image file, directory, or glob pattern. Omit for interactive mode. |
-| `--provider`, `-p` | `gemini` (default) or `anthropic` |
-| `--model` | Override the provider's default model |
-| `--output`, `-o` | Write results to a file |
-
-### Interactive Mode
-
-When run without arguments, the tool enters an interactive loop with tab-completion for file paths. Type `q`, `quit`, or `exit` to stop.
-
-### Default Models
-
-| Provider | Model |
-|----------|-------|
-| Gemini | `gemini-2.5-flash` |
-
-## Web App — `web.py`
-
-A Flask-based web interface using the Gemini API.
-
-**Live:** https://ai.tchung.org/image-to-prompt/
-
-### Running Locally
-
-```bash
-python web.py
-# Opens at http://localhost:5000
-```
-
-### Features
+## Features
 
 - Drag-and-drop or click-to-upload image input
 - Live image preview with clear/regenerate controls
@@ -90,7 +26,14 @@ python web.py
 - Responsive two-column layout (Catppuccin Mocha theme)
 - Error handling with user-friendly messages
 
-### API Endpoint
+## Running Locally
+
+```bash
+python web.py
+# Opens at http://localhost:5000
+```
+
+## API Endpoint
 
 ```
 POST /generate
@@ -130,9 +73,7 @@ ssh root@ai "systemctl restart image-to-prompt"
 ## Project Structure
 
 ```
-code/
-├── image-to-prompt.py   # CLI tool (multi-provider)
-├── web.py               # Flask web app (Gemini only)
-├── index.html           # Web frontend (SPA)
+├── web.py        # Flask web app
+├── index.html    # Web frontend (SPA)
 └── README.md
 ```
