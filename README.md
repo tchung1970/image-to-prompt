@@ -6,7 +6,7 @@ Analyze images and generate detailed AI image-generation prompts using Google Ge
 
 ## Overview
 
-Given an image, the tool produces a single flowing paragraph prompt capturing subject, clothing, setting, lighting, camera/composition, style, and mood — ready to paste into Nano Banana Pro, Nano Banana, etc.
+Given an image, the tool produces a single flowing paragraph prompt capturing subject, clothing, setting, lighting, camera/composition, style, and mood — ready to paste into Nano Banana Pro, Nano Banana 2, etc.
 
 ## Requirements
 
