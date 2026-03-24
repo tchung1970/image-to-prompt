@@ -1,6 +1,6 @@
 # Image to Prompt
 
-Analyze images and generate detailed AI image-generation prompts using Google Gemini.
+Analyze images and generate detailed AI image-generation prompts using Google Gemini API (gemini-flash-2.5).
 
 **Live:** https://ai.tchung.org/image-to-prompt/
 
