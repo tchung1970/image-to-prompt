@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image to Prompt</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #1e1e2e;
+            color: #cdd6f4;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 50px 20px;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            margin-bottom: 48px;
+            color: #fff;
+        }
+
+        h1 span {
+            background: linear-gradient(135deg, #89b4fa, #cba6f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            align-items: stretch;
+        }
+
+        @media (max-width: 860px) {
+            .two-col {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: #282840;
+            border-radius: 24px;
+            border: 1px solid #363652;
+            padding: 36px;
+        }
+
+        .drop-zone {
+            border: 2px dashed #45456a;
+            border-radius: 20px;
+            padding: 64px 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #2a2a42;
+        }
+
+        .drop-zone:hover, .drop-zone.drag-over {
+            border-color: #89b4fa;
+            background: #2e2e4a;
+        }
+
+        .drop-zone-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        .drop-zone p {
+            color: #a6adc8;
+            font-size: 1.15rem;
+            font-weight: 400;
+        }
+
+        .drop-zone .formats {
+            color: #6c7086;
+            font-size: 0.9rem;
+            margin-top: 10px;
+        }
+
+        .preview-area {
+            display: none;
+            border-radius: 20px;
+            overflow: hidden;
+            background: #2a2a42;
+            border: 1px solid #363652;
+        }
+
+        .preview-area img {
+            width: 100%;
+            max-height: 600px;
+            object-fit: contain;
+            display: block;
+            background: #232338;
+        }
+
+        .preview-controls {
+            padding: 18px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid #363652;
+        }
+
+        .file-name {
+            color: #a6adc8;
+            font-size: 0.95rem;
+        }
+
+        .btn-group { display: flex; gap: 12px; }
+
+        .btn {
+            padding: 12px 32px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            font-family: inherit;
+        }
+
+        .btn-generate {
+            background: linear-gradient(135deg, #89b4fa, #cba6f7);
+            color: #1e1e2e;
+            box-shadow: 0 4px 16px rgba(137, 180, 250, 0.25);
+        }
+
+        .btn-generate:hover {
+            box-shadow: 0 6px 24px rgba(137, 180, 250, 0.35);
+            transform: translateY(-1px);
+        }
+
+        .btn-generate:disabled {
+            background: #45456a;
+            color: #6c7086;
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-clear {
+            background: #333350;
+            color: #a6adc8;
+            border: 1px solid #45456a;
+            padding: 12px 24px;
+        }
+
+        .btn-clear:hover { background: #3e3e5c; color: #cdd6f4; }
+
+        .result-card {
+            display: none;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+
+        .result-header h3 {
+            color: #89b4fa;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .btn-copy {
+            background: #333350;
+            color: #a6adc8;
+            border: 1px solid #45456a;
+            padding: 8px 20px;
+            font-size: 0.9rem;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .btn-copy:hover { background: #3e3e5c; color: #89b4fa; border-color: #89b4fa; }
+        .btn-copy.copied { background: #89b4fa; color: #1e1e2e; border-color: #89b4fa; }
+
+        .prompt-text {
+            color: #bac2de;
+            line-height: 1.9;
+            font-size: 1.05rem;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            background: #232338;
+            padding: 24px;
+            border-radius: 16px;
+            border: 1px solid #363652;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 48px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #363652;
+            border-top-color: #89b4fa;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 18px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .loading p { color: #6c7086; font-size: 1rem; }
+
+        .error {
+            background: #302030;
+            border: 1px solid #5a3040;
+            color: #f38ba8;
+            padding: 16px 22px;
+            border-radius: 14px;
+            margin-top: 18px;
+            display: none;
+            font-size: 1rem;
+        }
+
+        .placeholder-card {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 300px;
+            color: #45456a;
+            font-size: 1.1rem;
+        }
+
+        .footer {
+            margin-top: 50px;
+            color: #a6adc8;
+            font-size: 1rem;
+            text-align: center;
+        }
+
+        .footer a {
+            color: #89b4fa;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <h1>IMAGE <span>&rarr;</span> PROMPT</h1>
+
+    <div class="container">
+        <div class="two-col">
+            <!-- Left: Image -->
+            <div class="card">
+                <div class="drop-zone" id="dropZone">
+                    <div class="drop-zone-icon">&#128444;&#65039;</div>
+                    <p>Drop an image here or click to upload</p>
+                    <p class="formats">Supports: JPG, PNG, GIF, WebP</p>
+                    <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.gif,.webp" hidden>
+                </div>
+
+                <div class="preview-area" id="previewArea">
+                    <img id="previewImg" src="" alt="Preview">
+                    <div class="preview-controls">
+                        <span class="file-name" id="fileName"></span>
+                        <div class="btn-group">
+                            <button class="btn btn-clear" id="clearBtn">Clear</button>
+                            <button class="btn btn-generate" id="generateBtn">Generate Prompt</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>Analyzing image...</p>
+                </div>
+
+                <div class="error" id="error"></div>
+            </div>
+
+            <!-- Right: Prompt -->
+            <div class="card result-card" id="resultArea">
+                <div class="result-header">
+                    <h3>Generated Prompt</h3>
+                    <button class="btn-copy" id="copyBtn">Copy</button>
+                </div>
+                <div class="prompt-text" id="promptText"></div>
+            </div>
+
+            <div class="card placeholder-card" id="placeholderCard">
+                Prompt will appear here
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        Written in <a href="https://www.anthropic.com/news/claude-opus-4-6" target="_blank">Claude Opus 4.6</a> and Powered by <a href="https://ai.google.dev/gemini-api/docs/pricing#gemini-2.5-flash" target="_blank">Google Gemini API</a> · <a href="README.md" target="_blank">README</a>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const previewArea = document.getElementById('previewArea');
+        const previewImg = document.getElementById('previewImg');
+        const fileName = document.getElementById('fileName');
+        const clearBtn = document.getElementById('clearBtn');
+        const generateBtn = document.getElementById('generateBtn');
+        const loading = document.getElementById('loading');
+        const error = document.getElementById('error');
+        const resultArea = document.getElementById('resultArea');
+        const promptText = document.getElementById('promptText');
+        const copyBtn = document.getElementById('copyBtn');
+        const placeholderCard = document.getElementById('placeholderCard');
+
+        let selectedFile = null;
+
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            if (e.dataTransfer.files.length) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length) {
+                handleFile(fileInput.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            selectedFile = file;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImg.src = e.target.result;
+                fileName.textContent = file.name;
+                dropZone.style.display = 'none';
+                previewArea.style.display = 'block';
+                error.style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        clearBtn.addEventListener('click', () => {
+            selectedFile = null;
+            fileInput.value = '';
+            previewArea.style.display = 'none';
+            dropZone.style.display = 'block';
+            resultArea.style.display = 'none';
+            placeholderCard.style.display = 'flex';
+            error.style.display = 'none';
+        });
+
+        generateBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+
+            generateBtn.disabled = true;
+            loading.style.display = 'block';
+            error.style.display = 'none';
+            resultArea.style.display = 'none';
+            placeholderCard.style.display = 'none';
+
+            const formData = new FormData();
+            formData.append('image', selectedFile);
+
+            try {
+                const res = await fetch('generate', { method: 'POST', body: formData });
+                const data = await res.json();
+
+                if (data.error) {
+                    error.textContent = data.error;
+                    error.style.display = 'block';
+                    placeholderCard.style.display = 'flex';
+                } else {
+                    promptText.textContent = data.prompt;
+                    resultArea.style.display = 'block';
+                }
+            } catch (err) {
+                error.textContent = 'Failed to connect to server.';
+                error.style.display = 'block';
+                placeholderCard.style.display = 'flex';
+            } finally {
+                loading.style.display = 'none';
+                generateBtn.disabled = false;
+            }
+        });
+
+        copyBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(promptText.textContent);
+            copyBtn.textContent = 'Copied!';
+            copyBtn.classList.add('copied');
+            setTimeout(() => {
+                copyBtn.textContent = 'Copy';
+                copyBtn.classList.remove('copied');
+            }, 2000);
+        });
+    </script>
+</body>
+</html>
