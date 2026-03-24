@@ -23,6 +23,7 @@ from flask import Flask, request, jsonify, send_from_directory
 from google import genai
 
 app = Flask(__name__)
+app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # 5 MB upload limit
 
 UPLOAD_DIR = Path(__file__).parent / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
@@ -90,6 +91,10 @@ def generate():
 
     mime = mimetypes.guess_type(file.filename)[0] or "image/jpeg"
     image_bytes = file.read()
+
+    max_size = app.config["MAX_CONTENT_LENGTH"]
+    if len(image_bytes) > max_size:
+        return jsonify({"error": f"Image too large. Maximum size is {max_size // (1024 * 1024)} MB."}), 413
 
     try:
         prompt_text = generate_prompt(image_bytes, mime)

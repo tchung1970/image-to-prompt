@@ -272,7 +272,7 @@
                 <div class="drop-zone" id="dropZone">
                     <div class="drop-zone-icon">&#128444;&#65039;</div>
                     <p>Drop an image here or click to upload</p>
-                    <p class="formats">Supports: JPG, PNG, GIF, WebP</p>
+                    <p class="formats">Supports: JPG, PNG, GIF, WebP (max 5 MB)</p>
                     <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.gif,.webp" hidden>
                 </div>
 
@@ -356,7 +356,14 @@
             }
         });
 
+        const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+
         function handleFile(file) {
+            if (file.size > MAX_FILE_SIZE) {
+                error.textContent = 'Image too large. Maximum size is 5 MB.';
+                error.style.display = 'block';
+                return;
+            }
             selectedFile = file;
             const reader = new FileReader();
             reader.onload = (e) => {
