@@ -74,10 +74,6 @@ def index():
     return send_from_directory(Path(__file__).parent, "index.html")
 
 
-@app.route("/README.md")
-def readme():
-    return send_from_directory(Path(__file__).parent, "README.md", mimetype="text/plain")
-
 
 @app.route("/generate", methods=["POST"])
 def generate():
