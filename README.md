@@ -16,7 +16,7 @@ Given an image, the tool produces a single flowing paragraph prompt capturing su
 
 ## Supported Image Formats
 
-`.jpg` `.jpeg` `.png` `.gif` `.webp` — max 5 MB per image
+`.jpg` `.jpeg` `.png` `.gif` `.webp` — max 10 MB per image
 
 ## Features
 
@@ -56,7 +56,7 @@ The live site runs on `ai.tchung.org` with the following setup:
 
 **Nginx** reverse proxy:
 - `/image-to-prompt/` → `http://127.0.0.1:5000/`
-- `client_max_body_size 5M` to allow image uploads up to 5 MB
+- `client_max_body_size 10M` to allow image uploads up to 10 MB
 - 120s read/send timeout for long AI generation requests
 
 **Environment:** Hidden `.env` file in the app directory (`chmod 600`) with `GEMINI_API_KEY`
