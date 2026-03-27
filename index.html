@@ -358,7 +358,14 @@
 
         const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
+        const SUPPORTED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
         function handleFile(file) {
+            if (!SUPPORTED_TYPES.includes(file.type)) {
+                error.textContent = 'Unsupported file type. Please upload a JPG, PNG, GIF, or WebP image.';
+                error.style.display = 'block';
+                return;
+            }
             if (file.size > MAX_FILE_SIZE) {
                 error.textContent = 'Image too large. Maximum size is 10 MB.';
                 error.style.display = 'block';
