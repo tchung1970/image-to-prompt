@@ -225,6 +225,31 @@
 
         .loading p { color: #6c7086; font-size: 1rem; }
 
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #363652;
+            border-radius: 3px;
+            margin-top: 14px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #89b4fa, #cba6f7);
+            border-radius: 3px;
+            width: 0%;
+            transition: width 0.2s ease;
+        }
+
+        .progress-text {
+            color: #6c7086;
+            font-size: 0.85rem;
+            margin-top: 8px;
+            display: none;
+        }
+
         .error {
             background: #302030;
             border: 1px solid #5a3040;
@@ -309,7 +334,11 @@
 
                 <div class="loading" id="loading">
                     <div class="spinner"></div>
-                    <p>Analyzing image...</p>
+                    <p id="loadingText">Uploading...</p>
+                    <div class="progress-bar" id="progressBar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <p class="progress-text" id="progressText"></p>
                 </div>
 
                 <div class="error" id="error">
@@ -349,6 +378,10 @@
         const error = document.getElementById('error');
         const errorText = document.getElementById('errorText');
         const dismissBtn = document.getElementById('dismissBtn');
+        const loadingText = document.getElementById('loadingText');
+        const progressBar = document.getElementById('progressBar');
+        const progressFill = document.getElementById('progressFill');
+        const progressTextEl = document.getElementById('progressText');
         const resultArea = document.getElementById('resultArea');
         const promptText = document.getElementById('promptText');
         const copyBtn = document.getElementById('copyBtn');
@@ -418,11 +451,16 @@
             error.style.display = 'none';
         });
 
-        generateBtn.addEventListener('click', async () => {
+        generateBtn.addEventListener('click', () => {
             if (!selectedFile) return;
 
             generateBtn.disabled = true;
             loading.style.display = 'block';
+            loadingText.textContent = 'Uploading...';
+            progressBar.style.display = 'block';
+            progressFill.style.width = '0%';
+            progressTextEl.style.display = 'block';
+            progressTextEl.textContent = '0%';
             error.style.display = 'none';
             resultArea.style.display = 'none';
             placeholderCard.style.display = 'none';
@@ -430,26 +468,51 @@
             const formData = new FormData();
             formData.append('image', selectedFile);
 
-            try {
-                const res = await fetch('generate', { method: 'POST', body: formData });
-                const data = await res.json();
+            const xhr = new XMLHttpRequest();
 
-                if (data.error) {
-                    errorText.textContent = data.error;
+            xhr.upload.addEventListener('progress', (e) => {
+                if (e.lengthComputable) {
+                    const pct = Math.round((e.loaded / e.total) * 100);
+                    progressFill.style.width = pct + '%';
+                    progressTextEl.textContent = pct + '%';
+                    if (pct >= 100) {
+                        loadingText.textContent = 'Analyzing image...';
+                        progressBar.style.display = 'none';
+                        progressTextEl.style.display = 'none';
+                    }
+                }
+            });
+
+            xhr.addEventListener('load', () => {
+                try {
+                    const data = JSON.parse(xhr.responseText);
+                    if (data.error) {
+                        errorText.textContent = data.error;
+                        error.style.display = 'flex';
+                        placeholderCard.style.display = 'flex';
+                    } else {
+                        promptText.textContent = data.prompt;
+                        resultArea.style.display = 'block';
+                    }
+                } catch (err) {
+                    errorText.textContent = 'Failed to parse server response.';
                     error.style.display = 'flex';
                     placeholderCard.style.display = 'flex';
-                } else {
-                    promptText.textContent = data.prompt;
-                    resultArea.style.display = 'block';
                 }
-            } catch (err) {
+                loading.style.display = 'none';
+                generateBtn.disabled = false;
+            });
+
+            xhr.addEventListener('error', () => {
                 errorText.textContent = 'Failed to connect to server.';
                 error.style.display = 'flex';
                 placeholderCard.style.display = 'flex';
-            } finally {
                 loading.style.display = 'none';
                 generateBtn.disabled = false;
-            }
+            });
+
+            xhr.open('POST', 'generate');
+            xhr.send(formData);
         });
 
         dismissBtn.addEventListener('click', () => {
