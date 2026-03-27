@@ -46,7 +46,7 @@ Output ONLY the prompt text — no headers, labels, or explanations. Write it as
 flowing paragraph suitable for pasting directly into an image generation model.\
 """
 
-MODEL = "gemini-2.5-flash"
+MODEL = "gemini-3-flash-preview"
 
 
 def generate_prompt(image_bytes: bytes, mime_type: str) -> str:
@@ -110,7 +110,7 @@ if __name__ == "__main__":
 
 Claude Code: Opus 4.6
 Provider: Google Gemini API
-Model:    gemini-2.5-flash
+Model:    gemini-3-flash-preview
 
 Open http://localhost:5000 in your browser
 """)
