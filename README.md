@@ -65,9 +65,9 @@ The live site runs on `ai.tchung.org` with the following setup:
 
 ```bash
 # Copy files to server
-scp web.py index.html README.md root@ai:/var/www/html/image-to-prompt/
+scp web.py index.html root@ai:/var/www/html/image-to-prompt/
 
-# Restart the service (required — Flask serves all files including README.md)
+# Restart the service
 ssh root@ai "systemctl restart image-to-prompt"
 ```
 
