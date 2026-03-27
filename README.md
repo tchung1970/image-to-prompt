@@ -20,7 +20,7 @@ Given an image, the tool produces a single flowing paragraph prompt capturing su
 
 ## Features
 
-- Drag-and-drop or click-to-upload image input
+- Drag-and-drop or click-to-upload image input with client-side file type validation
 - Live image preview with clear/regenerate controls
 - One-click copy of generated prompt
 - Responsive two-column layout (Catppuccin Mocha theme)
