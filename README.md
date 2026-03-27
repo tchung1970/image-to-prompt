@@ -24,7 +24,7 @@ Given an image, the tool produces a single flowing paragraph prompt capturing su
 - Live image preview with clear/regenerate controls
 - One-click copy of generated prompt
 - Responsive two-column layout (Catppuccin Mocha theme)
-- Error handling with user-friendly messages
+- Error handling with dismissible messages
 
 ## Running Locally
 
