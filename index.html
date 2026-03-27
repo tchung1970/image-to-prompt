@@ -205,6 +205,13 @@
             border: 1px solid #363652;
         }
 
+        .char-count {
+            text-align: right;
+            color: #6c7086;
+            font-size: 0.85rem;
+            margin-top: 8px;
+        }
+
         .loading {
             display: none;
             text-align: center;
@@ -354,6 +361,7 @@
                     <button class="btn-copy" id="copyBtn">Copy</button>
                 </div>
                 <div class="prompt-text" id="promptText"></div>
+                <div class="char-count" id="charCount"></div>
             </div>
 
             <div class="card placeholder-card" id="placeholderCard">
@@ -492,6 +500,7 @@
                         placeholderCard.style.display = 'flex';
                     } else {
                         promptText.textContent = data.prompt;
+                        document.getElementById('charCount').textContent = data.prompt.length + ' / 2000 characters';
                         resultArea.style.display = 'block';
                     }
                 } catch (err) {
