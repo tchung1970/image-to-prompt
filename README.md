@@ -8,6 +8,10 @@ Analyze images and generate detailed AI image-generation prompts using Google Ge
 
 Given an image, the tool produces a single flowing paragraph prompt capturing subject, clothing, setting, lighting, camera/composition, style, and mood — ready to paste into Nano Banana Pro, Nano Banana 2, etc.
 
+## AI Model
+
+- **Google Gemini 3 Flash Preview** (`gemini-3-flash-preview`) — free tier available
+
 ## Requirements
 
 - Python 3.10+
