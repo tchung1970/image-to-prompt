@@ -234,7 +234,27 @@
             margin-top: 18px;
             display: none;
             font-size: 1rem;
+            align-items: center;
+            gap: 12px;
         }
+
+        .error-text { flex: 1; }
+
+        .btn-dismiss {
+            background: #5a3040;
+            color: #f38ba8;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-family: inherit;
+            font-weight: 500;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .btn-dismiss:hover { background: #6a3a50; }
 
         .placeholder-card {
             display: flex;
@@ -292,7 +312,10 @@
                     <p>Analyzing image...</p>
                 </div>
 
-                <div class="error" id="error"></div>
+                <div class="error" id="error">
+                    <span class="error-text" id="errorText"></span>
+                    <button class="btn-dismiss" id="dismissBtn">OK</button>
+                </div>
             </div>
 
             <!-- Right: Prompt -->
@@ -324,6 +347,8 @@
         const generateBtn = document.getElementById('generateBtn');
         const loading = document.getElementById('loading');
         const error = document.getElementById('error');
+        const errorText = document.getElementById('errorText');
+        const dismissBtn = document.getElementById('dismissBtn');
         const resultArea = document.getElementById('resultArea');
         const promptText = document.getElementById('promptText');
         const copyBtn = document.getElementById('copyBtn');
@@ -362,13 +387,13 @@
 
         function handleFile(file) {
             if (!SUPPORTED_TYPES.includes(file.type)) {
-                error.textContent = 'Unsupported file type. Please upload a JPG, PNG, GIF, or WebP image.';
-                error.style.display = 'block';
+                errorText.textContent = 'Unsupported file type. Please upload a JPG, PNG, GIF, or WebP image.';
+                error.style.display = 'flex';
                 return;
             }
             if (file.size > MAX_FILE_SIZE) {
-                error.textContent = 'Image too large. Maximum size is 10 MB.';
-                error.style.display = 'block';
+                errorText.textContent = 'Image too large. Maximum size is 10 MB.';
+                error.style.display = 'flex';
                 return;
             }
             selectedFile = file;
@@ -410,21 +435,25 @@
                 const data = await res.json();
 
                 if (data.error) {
-                    error.textContent = data.error;
-                    error.style.display = 'block';
+                    errorText.textContent = data.error;
+                    error.style.display = 'flex';
                     placeholderCard.style.display = 'flex';
                 } else {
                     promptText.textContent = data.prompt;
                     resultArea.style.display = 'block';
                 }
             } catch (err) {
-                error.textContent = 'Failed to connect to server.';
-                error.style.display = 'block';
+                errorText.textContent = 'Failed to connect to server.';
+                error.style.display = 'flex';
                 placeholderCard.style.display = 'flex';
             } finally {
                 loading.style.display = 'none';
                 generateBtn.disabled = false;
             }
+        });
+
+        dismissBtn.addEventListener('click', () => {
+            error.style.display = 'none';
         });
 
         copyBtn.addEventListener('click', () => {
