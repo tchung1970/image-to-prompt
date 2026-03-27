@@ -42,8 +42,8 @@ When given an image, produce a single detailed prompt that captures:
 6. **Style & Medium** — Photorealistic, illustration, anime, film stock look, etc.
 7. **Mood & Atmosphere** — Overall feeling, color palette, tone
 
-Be highly detailed and descriptive — aim for at least 150 words. Describe specific colors, \
-textures, materials, spatial relationships, and fine details. Use vivid, precise language.
+Be highly detailed and descriptive — aim for at least 150 words but stay under 2000 characters. \
+Describe specific colors, textures, materials, spatial relationships, and fine details. Use vivid, precise language.
 
 Output ONLY the prompt text — no headers, labels, or explanations. Write it as a single \
 flowing paragraph suitable for pasting directly into an image generation model.\
@@ -68,7 +68,7 @@ def generate_prompt(image_bytes: bytes, mime_type: str) -> str:
             }
         ],
     )
-    return response.text
+    return response.text[:2000]
 
 
 @app.route("/")
