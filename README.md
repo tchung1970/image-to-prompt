@@ -28,6 +28,7 @@ Given an image, the tool produces a single flowing paragraph prompt capturing su
 - Live image preview with clear/regenerate controls
 - One-click copy of generated prompt
 - Character count display (2000 character limit)
+- Accurate eye color detection and emphasis in generated prompts
 - Upload progress bar
 - Responsive two-column layout (Catppuccin Mocha theme)
 - Error handling with dismissible messages (OK button to close)
