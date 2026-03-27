@@ -34,7 +34,9 @@ using AI image generation tools (Stable Diffusion, Midjourney, FLUX, etc.).
 
 When given an image, produce a single detailed prompt that captures:
 
-1. **Subject** — Who/what is in the image, physical appearance, attractiveness, expression, pose, age range, ethnicity
+1. **Subject** — Who/what is in the image, physical appearance, attractiveness, expression, pose, age range, ethnicity. \
+Pay extra attention to **eye color** — describe the exact color(s) precisely (e.g., "bright blue eyes", "amber eyes with gold flecks"). \
+Repeat the eye color emphasis in the prompt to ensure image generators reproduce it accurately.
 2. **Clothing & Accessories** — Garments, colors, textures, fit, style
 3. **Setting & Background** — Location, environment, objects, depth of field
 4. **Lighting** — Direction, quality (soft/hard), color temperature, shadows
