@@ -27,6 +27,8 @@ Given an image, the tool produces a single flowing paragraph prompt capturing su
 - Drag-and-drop or click-to-upload image input with client-side file type validation
 - Live image preview with clear/regenerate controls
 - One-click copy of generated prompt
+- Character count display (2000 character limit)
+- Upload progress bar
 - Responsive two-column layout (Catppuccin Mocha theme)
 - Error handling with dismissible messages (OK button to close)
 
