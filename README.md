@@ -10,7 +10,7 @@ Given an image, the tool produces a single flowing paragraph prompt capturing su
 
 ## AI Model
 
-- **Google Gemini 3 Flash Preview** (`gemini-3-flash-preview`) — free tier available
+- [**Google Gemini 3 Flash Preview**](https://ai.google.dev/gemini-api/docs/pricing#gemini-3-flash-preview) (`gemini-3-flash-preview`) — free tier available
 
 ## Requirements
 
