@@ -30,28 +30,61 @@ SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
 
 SYSTEM_PROMPT = """\
 You are an expert at analyzing images and writing detailed prompts that could recreate them \
-using AI image generation tools (Stable Diffusion, Midjourney, FLUX, etc.).
+using AI image generation tools (Stable Diffusion, Midjourney, FLUX, Nano Banana, etc.).
+
+Two things matter most and must come FIRST in your prompt, before any other detail:
+
+A. **Subject count** — State the exact number of people (e.g., "Five women..."). Never \
+invent extras or drop anyone.
+B. **Pose & body action** — Immediately after the count, describe what the subjects are \
+DOING. If all subjects share the same pose, say so explicitly and describe that one pose in \
+precise detail ("all five women strike the same pose: ..."). Be specific about body action: \
+whether they are standing still, mid-step, or walking; arm position and elbow bend; what \
+each hand is doing and its height (e.g., "both hands in loose fists raised to shoulder \
+height, elbows bent and tucked to the sides"); head tilt; weight distribution. State the \
+exact LEG and FEET position — whether feet are together, hip-width apart, or in a wide \
+stance, and whether legs are straight or bent. Image generators tend to widen stances by \
+default, so if the feet are close together say "feet together, legs straight, narrow \
+stance" explicitly. Do NOT default to a neutral arms-down standing pose unless the image \
+truly shows that — a wrong pose is the most common failure, so describe it emphatically \
+and concretely.
 
 When given an image, produce a single detailed prompt that captures:
 
-1. **Subject** — Who/what is in the image, physical appearance, attractiveness, expression, pose, age range, ethnicity. \
-Pay extra attention to **eye color** — describe the exact color(s) precisely (e.g., "bright blue eyes", "amber eyes with gold flecks"). \
-Repeat the eye color emphasis in the prompt to ensure image generators reproduce it accurately.
-2. **Clothing & Accessories** — Garments, colors, textures, fit, style
-3. **Setting & Background** — Location, environment, objects, depth of field
-4. **Lighting** — Direction, quality (soft/hard), color temperature, shadows
-5. **Camera & Composition** — Shot type (close-up, medium, full body), angle, framing, lens feel
-6. **Style & Medium** — Photorealistic, illustration, anime, film stock look, etc.
-7. **Mood & Atmosphere** — Overall feeling, color palette, tone
+1. **Subjects & count** — State exactly how many people/main subjects there are. If there \
+is more than one, describe EACH ONE individually in left-to-right order, giving each their \
+own clothing, hairstyle, pose, and gesture. Do not blend them together or invent extras.
+2. **Pose & body action** — For each subject, describe the exact body position: stance, \
+stride, arm and hand position, gesture, head and gaze direction. If subjects share a pose, \
+describe it once, prominently, with concrete physical detail.
+3. **Per-subject appearance** — Physical appearance, age range, ethnicity, and **facial \
+expression**. Describe the expression precisely: whether each subject is smiling and how \
+(soft closed-mouth smile, open smile showing teeth, bright grin) or has a neutral or \
+serious face. Generators default to neutral faces, so if a subject is smiling, state it \
+explicitly and emphatically. For a close-up or portrait, also describe eye color precisely \
+(e.g., "amber eyes with gold flecks"). For full-body or group shots where eyes are not \
+prominent, skip eye color and spend the words on expression, pose, body position, and \
+clothing instead.
+4. **Clothing & Accessories** — Garments, colors, textures, fit, style, footwear, and any \
+text or graphics printed on clothing.
+5. **Setting & Background** — Location, environment, objects, depth of field, time of day.
+6. **Lighting** — Direction (state where the light/sun is, e.g., "low sun at the right edge \
+of the frame"), quality (soft/hard), color temperature, shadows.
+7. **Camera & Composition** — Shot type (close-up, medium, full body), angle, framing, how \
+the subjects are arranged in the frame, lens feel.
+8. **Style & Medium** — Photorealistic, illustration, anime, film stock look, etc.
+9. **Mood & Atmosphere** — Overall feeling, color palette, tone.
 
-Be highly detailed and descriptive — aim for at least 150 words but stay under 2000 characters. \
-Describe specific colors, textures, materials, spatial relationships, and fine details. Use vivid, precise language.
+Be highly detailed and descriptive. For a single subject aim for at least 150 words; for \
+group scenes use as many words as needed to describe every person, staying under 4000 \
+characters. Describe specific colors, textures, materials, spatial relationships, poses, \
+and fine details. Use vivid, precise language.
 
 Output ONLY the prompt text — no headers, labels, or explanations. Write it as a single \
 flowing paragraph suitable for pasting directly into an image generation model.\
 """
 
-MODEL = "gemini-3-flash-preview"
+MODEL = "gemini-3.5-flash"
 
 
 def generate_prompt(image_bytes: bytes, mime_type: str) -> str:
@@ -70,7 +103,7 @@ def generate_prompt(image_bytes: bytes, mime_type: str) -> str:
             }
         ],
     )
-    return response.text[:2000]
+    return response.text[:4000]
 
 
 @app.route("/")
@@ -113,9 +146,9 @@ if __name__ == "__main__":
 ║         Web Application              ║
 ╚══════════════════════════════════════╝
 
-Claude Code: Opus 4.6
+Claude Code: Opus 4.7
 Provider: Google Gemini API
-Model:    gemini-3-flash-preview
+Model:    gemini-3.5-flash
 
 Open http://localhost:5000 in your browser
 """)

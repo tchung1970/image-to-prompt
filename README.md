@@ -1,6 +1,6 @@
 # Image to Prompt
 
-Analyze images and generate detailed AI image-generation prompts using Google Gemini API (gemini-3-flash-preview).
+Analyze images and generate detailed AI image-generation prompts using Google Gemini API (gemini-3.5-flash).
 
 **Live:** https://ai.tchung.org/image-to-prompt/
 
@@ -10,7 +10,9 @@ Given an image, the tool produces a single flowing paragraph prompt capturing su
 
 ## AI Model
 
-- [**Google Gemini 3 Flash Preview**](https://ai.google.dev/gemini-api/docs/pricing#gemini-3-flash-preview) (`gemini-3-flash-preview`) — free tier available
+- [**Google Gemini 3.5 Flash**](https://ai.google.dev/gemini-api/docs/pricing#gemini-3.5-flash) (`gemini-3.5-flash`) — free tier available
+
+  Upgraded from `gemini-3-flash-preview` for more accurate image analysis and prompt detail.
 
 ## Requirements
 
@@ -27,8 +29,10 @@ Given an image, the tool produces a single flowing paragraph prompt capturing su
 - Drag-and-drop or click-to-upload image input with client-side file type validation
 - Live image preview with clear/regenerate controls
 - One-click copy of generated prompt
-- Character count display (2000 character limit)
-- Accurate eye color detection and emphasis in generated prompts
+- Character count display (4000 character limit)
+- Multi-subject scenes: counts people and describes each one individually
+- Pose-first prompting: front-loads body action, stance, and gesture for accurate poses
+- Accurate eye color detection for portraits and close-ups
 - Upload progress bar
 - Responsive two-column layout (Catppuccin Mocha theme)
 - Error handling with dismissible messages (OK button to close)
