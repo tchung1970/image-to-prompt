@@ -186,6 +186,7 @@
 
         .result-card {
             display: none;
+            flex-direction: column;
         }
 
         .result-header {
@@ -242,6 +243,9 @@
 
         .prompt-text {
             color: #bac2de;
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
             line-height: 1.9;
             font-size: 1.05rem;
             white-space: pre-wrap;
@@ -648,7 +652,7 @@
                             // First words are in: swap the spinner for the
                             // result panel and let the rest stream into it.
                             loading.style.display = 'none';
-                            resultArea.style.display = 'block';
+                            resultArea.style.display = 'flex';
                             setStreaming(true);
                         }
                         prompt += msg.delta;
