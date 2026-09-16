@@ -215,6 +215,30 @@
 
         .btn-copy:hover { background: #3e3e5c; color: #89b4fa; border-color: #89b4fa; }
         .btn-copy.copied { background: #89b4fa; color: #1e1e2e; border-color: #89b4fa; }
+        .btn-copy:disabled { opacity: 0.4; cursor: default; }
+        .btn-copy:disabled:hover { background: #333350; color: #a6adc8; border-color: #45456a; }
+
+        /* While text is still arriving, a blinking caret trails it so a
+           half-written prompt can never be mistaken for a finished one. */
+        .prompt-text.streaming::after {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 1.05rem;
+            margin-left: 2px;
+            background: #89b4fa;
+            vertical-align: text-bottom;
+            animation: caret 1s steps(2, start) infinite;
+        }
+
+        @keyframes caret { to { visibility: hidden; } }
+
+        .streaming-note {
+            color: #89b4fa;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-right: 12px;
+        }
 
         .prompt-text {
             color: #bac2de;
@@ -384,7 +408,10 @@
             <div class="card result-card" id="resultArea">
                 <div class="result-header">
                     <h3>Generated Prompt</h3>
-                    <button class="btn-copy" id="copyBtn">Copy</button>
+                    <div>
+                        <span class="streaming-note" id="streamingNote" style="display: none;">generating...</span>
+                        <button class="btn-copy" id="copyBtn">Copy</button>
+                    </div>
                 </div>
                 <div class="prompt-text" id="promptText"></div>
                 <div class="char-count" id="charCount"></div>
@@ -421,6 +448,7 @@
         const promptText = document.getElementById('promptText');
         const copyBtn = document.getElementById('copyBtn');
         const placeholderCard = document.getElementById('placeholderCard');
+        const streamingNote = document.getElementById('streamingNote');
 
         let selectedFile = null;
 
@@ -533,12 +561,19 @@
             error.style.display = 'none';
             resultArea.style.display = 'none';
             placeholderCard.style.display = 'none';
+            promptText.textContent = '';
+            promptText.classList.remove('streaming');
+            streamingNote.style.display = 'none';
+            copyBtn.disabled = false;
 
             const failRequest = (message) => {
                 errorText.textContent = message;
                 error.style.display = 'flex';
+                resultArea.style.display = 'none';
                 placeholderCard.style.display = 'flex';
                 loading.style.display = 'none';
+                progressBar.style.display = 'none';
+                progressTextEl.style.display = 'none';
                 generateBtn.disabled = false;
             };
 
@@ -560,22 +595,101 @@
                 }
             });
 
-            xhr.addEventListener('load', () => {
-                try {
-                    const data = JSON.parse(xhr.responseText);
-                    if (data.error) {
-                        errorText.textContent = data.error;
-                        error.style.display = 'flex';
-                        placeholderCard.style.display = 'flex';
-                    } else {
-                        promptText.textContent = data.prompt;
-                        document.getElementById('charCount').textContent = data.prompt.length + ' / 4000 characters';
-                        resultArea.style.display = 'block';
+            // The server streams newline-delimited JSON. XHR exposes the
+            // partial body on every progress event, so we parse whatever whole
+            // lines have arrived and leave any trailing fragment for next time.
+            let consumed = 0;      // chars of responseText already parsed
+            let prompt = '';       // prompt assembled so far
+            let failed = false;    // the stream reported an error line
+            let complete = false;  // the stream sent its {"done"} line
+            const charCount = document.getElementById('charCount');
+
+            // A prompt that is still arriving must never look finished: caret
+            // blinking, "generating..." in the header, and Copy held back so a
+            // truncated prompt cannot be copied by mistake.
+            const setStreaming = (on) => {
+                promptText.classList.toggle('streaming', on);
+                streamingNote.style.display = on ? 'inline' : 'none';
+                copyBtn.disabled = on;
+            };
+
+            const drain = () => {
+                const body = xhr.responseText;
+                const lastBreak = body.lastIndexOf('\n');
+                if (lastBreak < consumed) return;
+
+                const lines = body.slice(consumed, lastBreak).split('\n');
+                consumed = lastBreak + 1;
+
+                for (const line of lines) {
+                    if (!line) continue;
+                    let msg;
+                    try {
+                        msg = JSON.parse(line);
+                    } catch (err) {
+                        continue;
                     }
-                } catch (err) {
-                    errorText.textContent = 'Failed to parse server response.';
-                    error.style.display = 'flex';
-                    placeholderCard.style.display = 'flex';
+                    if (msg.error) {
+                        failed = true;
+                        setStreaming(false);
+                        failRequest(msg.error);
+                    } else if (msg.reset) {
+                        // The generation was dropped part-way and restarted;
+                        // what we have is a fragment, so throw it away.
+                        prompt = '';
+                        promptText.textContent = '';
+                        charCount.textContent = '';
+                        resultArea.style.display = 'none';
+                        setStreaming(false);
+                        loading.style.display = 'block';
+                        loadingText.textContent = 'Gemini was busy — retrying...';
+                    } else if (msg.delta) {
+                        if (!prompt) {
+                            // First words are in: swap the spinner for the
+                            // result panel and let the rest stream into it.
+                            loading.style.display = 'none';
+                            resultArea.style.display = 'block';
+                            setStreaming(true);
+                        }
+                        prompt += msg.delta;
+                        promptText.textContent = prompt;
+                        // Deliberately not "/ 4000" yet: this is a running
+                        // total, not the length of a finished prompt.
+                        charCount.textContent = prompt.length + ' characters...';
+                    } else if (msg.done) {
+                        complete = true;
+                        setStreaming(false);
+                        charCount.textContent = prompt.length + ' / 4000 characters';
+                    }
+                }
+            };
+
+            xhr.addEventListener('progress', drain);
+
+            xhr.addEventListener('load', () => {
+                const ctype = xhr.getResponseHeader('Content-Type') || '';
+                if (!ctype.includes('x-ndjson')) {
+                    // A plain JSON error from the server, e.g. a rejected
+                    // upload, which never reaches the streaming path.
+                    let message = 'Server error (' + xhr.status + ').';
+                    try { message = JSON.parse(xhr.responseText).error || message; } catch (err) {}
+                    failRequest(message);
+                    return;
+                }
+                drain();
+                setStreaming(false);
+                if (!failed) {
+                    if (!prompt) {
+                        failRequest('Failed to parse server response.');
+                        return;
+                    }
+                    if (!complete) {
+                        // Connection closed mid-prompt. The text is real but
+                        // cut off, so say so rather than passing it off as done.
+                        errorText.textContent = 'The connection dropped before the prompt finished. The text below is incomplete.';
+                        error.style.display = 'flex';
+                        charCount.textContent = prompt.length + ' characters (incomplete)';
+                    }
                 }
                 loading.style.display = 'none';
                 generateBtn.disabled = false;
@@ -585,11 +699,12 @@
                 failRequest('Failed to connect to server.');
             });
 
-            // Slightly beyond the server's own 45s budget, so a normal busy
-            // response arrives first and only a genuine hang trips this.
-            xhr.timeout = 60000;
+            // Generous, because it now only catches a genuine stall: text
+            // normally starts arriving within a few seconds of upload.
+            xhr.timeout = 120000;
             xhr.addEventListener('timeout', () => {
-                failRequest('Timed out after 60 seconds. Gemini may be busy — please try again.');
+                setStreaming(false);
+                failRequest('Timed out waiting for Gemini. Please try again.');
             });
 
             xhr.open('POST', 'generate');
