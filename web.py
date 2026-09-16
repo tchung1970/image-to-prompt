@@ -158,6 +158,16 @@ def _rate_limit_message(e: APIError) -> str:
     return RATE_LIMIT_MESSAGE
 
 
+def _log_timing(image_bytes_len: int, first_token_s: float, total_s: float, chars: int) -> None:
+    """Record where a generation spent its time, so slowness is diagnosable."""
+    print(
+        f"[image-to-prompt] {image_bytes_len // 1024} KB image -> {chars} chars in "
+        f"{total_s:.1f}s (first token {first_token_s:.1f}s, "
+        f"decode {total_s - first_token_s:.1f}s)",
+        flush=True,
+    )
+
+
 def _stream_once(client: "genai.Client", b64: str, mime_type: str, timeout_s: float):
     return client.models.generate_content_stream(
         model=MODEL,
@@ -203,11 +213,17 @@ def generate_prompt_stream(image_bytes: bytes, mime_type: str):
             break
 
         sent = 0
+        started = time.monotonic()
         try:
             for chunk in _stream_once(client, b64, mime_type, remaining):
                 text = chunk.text
                 if not text:
                     continue
+                if sent == 0:
+                    # Time to first token is prefill (image tokens + thinking);
+                    # the rest is decode. Knowing which dominates is the only
+                    # way to tune latency without guessing.
+                    first_token_s = time.monotonic() - started
                 if sent + len(text) > MAX_PROMPT_CHARS:
                     text = text[: MAX_PROMPT_CHARS - sent]
                 if sent == 0 and emitted:
@@ -217,8 +233,10 @@ def generate_prompt_stream(image_bytes: bytes, mime_type: str):
                 emitted = True
                 yield {"delta": text}
                 if sent >= MAX_PROMPT_CHARS:
+                    _log_timing(len(image_bytes), first_token_s, time.monotonic() - started, sent)
                     return
             if sent:
+                _log_timing(len(image_bytes), first_token_s, time.monotonic() - started, sent)
                 return
             # A stream that closed without producing text is as good as a fault.
             print(f"[image-to-prompt] {MODEL} returned an empty stream", flush=True)
