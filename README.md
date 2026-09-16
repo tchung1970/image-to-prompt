@@ -30,8 +30,14 @@ The free tier returns errors often enough that the app has to handle them explic
 
 The response is **streamed**, which is what keeps the app responsive. A non-streaming call
 with `media_resolution=HIGH` takes ~32s, long enough that the browser gave up before the
-server answered. Streaming puts the first words on screen in ~7s and the full prompt in
-under 10s.
+server answered. Streaming keeps bytes moving the whole time, so neither nginx nor the
+browser sees an idle connection.
+
+The streaming is a transport detail, not a display mode: **the client buffers the text and
+opens the result panel only on `{"done": true}`**. A half-written prompt reads as noise,
+so there is nothing useful to show until the last sentence lands. What the user sees while
+waiting is the spinner, the current phase (`Uploading...` / `Analyzing image...` /
+`Writing the prompt...`) and a running clock.
 
 `/generate` returns newline-delimited JSON as the model produces it:
 
@@ -52,10 +58,17 @@ under 10s.
 The response sets `X-Accel-Buffering: no`; without it nginx buffers the whole stream and
 delivers it in one piece, defeating the point.
 
-**In-flight state is visible in the UI.** While text is arriving, a caret blinks after it,
-the header reads `generating...`, Copy is disabled, and the counter shows
-`884 characters...` rather than `884 / 4000`. Only `{"done": true}` finalizes it. Without
-this, a partial prompt is indistinguishable from a short finished one.
+A stream that ends without `{"done": true}` still shows its text, but flagged: the error
+bar says the connection dropped and the counter reads `884 characters (incomplete)` rather
+than `884 / 4000`. A partial prompt must never be presentable as a finished one.
+
+Each completed generation logs where its time went, because the two halves have different
+fixes — time-to-first-token is `media_resolution=HIGH` plus thinking, the rest is just
+prompt length:
+
+```
+[image-to-prompt] 2103 KB image -> 1236 chars in 31.4s (first token 9.2s, decode 22.2s)
+```
 
 ### Timeouts
 
@@ -94,6 +107,18 @@ Raw SDK errors are never shown in the UI. They are logged server-side
 (`GenerateRequestsPerDayPerProjectPerModel-FreeTier`), resetting at midnight Pacific. A
 short round of testing exhausts it, so verify frontend changes against a local mock that
 emits the same NDJSON rather than spending real calls.
+
+**Retries spend the quota too, and that is how it actually runs out.** Every attempt is
+billed, including a stream that produces 900 characters and then dies with a 503 — so with
+`MAX_ATTEMPTS = 3`, a single click can cost three requests. When 3.8 Flash is having a bad
+day the drops come in bursts (seven in four minutes, observed 2026-09-16), and the daily
+allowance is gone in well under ten clicks. The pattern in the log is unmistakable: a run
+of `dropped after N chars (503)` lines, then a `rate limited` 429.
+
+The quota is **per project, per model**. Every service sharing the API key and the model
+draws from the same 20, so a second app on the same key halves what this one gets. Three
+ways out, none currently taken: lower `MAX_ATTEMPTS`, fall back to a different model on a
+429 (a different model has its own separate 20/day), or enable billing.
 
 ## Requirements
 
