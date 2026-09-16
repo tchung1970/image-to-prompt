@@ -118,6 +118,29 @@
         .file-name {
             color: #a6adc8;
             font-size: 0.95rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        .ratio-badge {
+            display: none;
+            flex: none;
+            padding: 3px 10px;
+            border-radius: 999px;
+            background: #313244;
+            color: #89b4fa;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
         }
 
         .btn-group { display: flex; gap: 12px; }
@@ -331,7 +354,10 @@
                 <div class="preview-area" id="previewArea">
                     <img id="previewImg" src="" alt="Preview">
                     <div class="preview-controls">
-                        <span class="file-name" id="fileName"></span>
+                        <div class="file-meta">
+                            <span class="file-name" id="fileName"></span>
+                            <span class="ratio-badge" id="ratioBadge"></span>
+                        </div>
                         <div class="btn-group">
                             <button class="btn btn-clear" id="clearBtn">Clear</button>
                             <button class="btn btn-generate" id="generateBtn">Generate Prompt</button>
@@ -371,7 +397,7 @@
     </div>
 
     <div class="footer">
-        Written in <a href="https://www.anthropic.com/news/claude-opus-4-7" target="_blank">Claude Opus 4.7</a> and Powered by <a href="https://ai.google.dev/gemini-api/docs/pricing#gemini-3.5-flash" target="_blank">Gemini 3.5 Flash</a> &middot; <a href="https://github.com/tchung1970/image-to-prompt" target="_blank">GitHub</a>
+        Written in <a href="https://www.anthropic.com/news/claude-opus-5" target="_blank">Claude Opus 5</a> and Powered by <a href="https://ai.google.dev/gemini-api/docs/pricing#gemini-3.8-flash" target="_blank">Gemini 3.8 Flash</a> &middot; <a href="https://github.com/tchung1970/image-to-prompt" target="_blank">GitHub</a>
     </div>
 
     <script>
@@ -380,6 +406,7 @@
         const previewArea = document.getElementById('previewArea');
         const previewImg = document.getElementById('previewImg');
         const fileName = document.getElementById('fileName');
+        const ratioBadge = document.getElementById('ratioBadge');
         const clearBtn = document.getElementById('clearBtn');
         const generateBtn = document.getElementById('generateBtn');
         const loading = document.getElementById('loading');
@@ -440,6 +467,7 @@
             selectedFile = file;
             const reader = new FileReader();
             reader.onload = (e) => {
+                previewImg.onload = () => showRatio(previewImg.naturalWidth, previewImg.naturalHeight);
                 previewImg.src = e.target.result;
                 fileName.textContent = file.name;
                 dropZone.style.display = 'none';
@@ -449,9 +477,42 @@
             reader.readAsDataURL(file);
         }
 
+        // Mirrors aspect_ratio() in web.py — keep the two lists in sync.
+        const SUPPORTED_RATIOS = [
+            [1, 1],
+            [5, 4], [4, 5],
+            [4, 3], [3, 4],
+            [3, 2], [2, 3],
+            [16, 9], [9, 16],
+            [21, 9], [9, 21],
+        ];
+
+        function snapRatio(width, height) {
+            if (!width || !height) return null;
+            const target = Math.log(width / height);
+            let best = SUPPORTED_RATIOS[0];
+            let bestDist = Infinity;
+            for (const [a, b] of SUPPORTED_RATIOS) {
+                const dist = Math.abs(target - Math.log(a / b));
+                if (dist < bestDist) { bestDist = dist; best = [a, b]; }
+            }
+            const [a, b] = best;
+            const orientation = a === b ? 'square' : (a > b ? 'landscape' : 'portrait');
+            return { label: `${orientation} ${a}:${b}`, a, b };
+        }
+
+        function showRatio(width, height) {
+            const ratio = snapRatio(width, height);
+            if (!ratio) { ratioBadge.style.display = 'none'; return; }
+            ratioBadge.textContent = ratio.label;
+            ratioBadge.title = `${width} x ${height} px`;
+            ratioBadge.style.display = 'inline-block';
+        }
+
         clearBtn.addEventListener('click', () => {
             selectedFile = null;
             fileInput.value = '';
+            ratioBadge.style.display = 'none';
             previewArea.style.display = 'none';
             dropZone.style.display = 'block';
             resultArea.style.display = 'none';
@@ -472,6 +533,14 @@
             error.style.display = 'none';
             resultArea.style.display = 'none';
             placeholderCard.style.display = 'none';
+
+            const failRequest = (message) => {
+                errorText.textContent = message;
+                error.style.display = 'flex';
+                placeholderCard.style.display = 'flex';
+                loading.style.display = 'none';
+                generateBtn.disabled = false;
+            };
 
             const formData = new FormData();
             formData.append('image', selectedFile);
@@ -513,11 +582,14 @@
             });
 
             xhr.addEventListener('error', () => {
-                errorText.textContent = 'Failed to connect to server.';
-                error.style.display = 'flex';
-                placeholderCard.style.display = 'flex';
-                loading.style.display = 'none';
-                generateBtn.disabled = false;
+                failRequest('Failed to connect to server.');
+            });
+
+            // Slightly beyond the server's own 45s budget, so a normal busy
+            // response arrives first and only a genuine hang trips this.
+            xhr.timeout = 60000;
+            xhr.addEventListener('timeout', () => {
+                failRequest('Timed out after 60 seconds. Gemini may be busy — please try again.');
             });
 
             xhr.open('POST', 'generate');

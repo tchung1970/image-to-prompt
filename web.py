@@ -6,6 +6,7 @@ image-to-prompt web app — Upload an image and get a generation prompt.
 import base64
 import mimetypes
 import os
+import time
 from pathlib import Path
 
 # Load environment variables from .env (local first, then ~/.env)
@@ -21,6 +22,8 @@ if env_file.exists():
 
 from flask import Flask, request, jsonify, send_from_directory
 from google import genai
+from google.genai import types
+from google.genai.errors import APIError
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024  # 10 MB upload limit
@@ -84,13 +87,38 @@ Output ONLY the prompt text — no headers, labels, or explanations. Write it as
 flowing paragraph suitable for pasting directly into an image generation model.\
 """
 
-MODEL = "gemini-3.5-flash"
+MODEL = "gemini-3.8-flash"  # free tier
+
+# Transient server-side faults worth retrying. 504 is our own per-call timeout
+# coming back as an API error, so it belongs here too.
+RETRY_STATUSES = (500, 502, 503, 504)
+MAX_ATTEMPTS = 4
+
+# 429 is deliberately NOT retried. On the free tier it means the quota window is
+# exhausted, and hammering it with three more requests only digs the hole deeper.
+RATE_LIMIT_STATUS = 429
+
+BUSY_MESSAGE = "Gemini 3.8 Flash is busy right now. Please try again in a moment."
+RATE_LIMIT_MESSAGE = (
+    "Free-tier rate limit reached for Gemini 3.8 Flash. "
+    "Wait a minute before trying again."
+)
+
+# The SDK retries 503s internally with its own backoff. Left on, every step of
+# the fallback chain would stall for tens of seconds before we ever reach the
+# next model, so turn it off and let the chain do the work.
+CALL_TIMEOUT_SECONDS = 20
+HTTP_OPTIONS = types.HttpOptions(
+    timeout=CALL_TIMEOUT_SECONDS * 1000,  # the SDK wants milliseconds
+    retry_options=types.HttpRetryOptions(attempts=1),
+)
+
+# Hard ceiling on the whole request. Without it, eight chained calls could keep
+# the browser spinning for minutes; better to fail fast and let the user retry.
+TOTAL_BUDGET_SECONDS = 45
 
 
-def generate_prompt(image_bytes: bytes, mime_type: str) -> str:
-    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
-    b64 = base64.standard_b64encode(image_bytes).decode()
-
+def _generate_once(client: "genai.Client", b64: str, mime_type: str) -> str:
     response = client.models.generate_content(
         model=MODEL,
         contents=[
@@ -102,8 +130,45 @@ def generate_prompt(image_bytes: bytes, mime_type: str) -> str:
                 ],
             }
         ],
+        config=types.GenerateContentConfig(
+            # High resolution gives the model far more image tokens, which is what
+            # makes subject count, pose, and fine clothing detail come out right.
+            media_resolution=types.MediaResolution.MEDIA_RESOLUTION_HIGH,
+            # Enough reasoning to count subjects and read poses carefully, without
+            # the latency of the default "high" level.
+            thinking_config=types.ThinkingConfig(thinking_level="low"),
+        ),
     )
     return response.text[:4000]
+
+
+def generate_prompt(image_bytes: bytes, mime_type: str) -> str:
+    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"], http_options=HTTP_OPTIONS)
+    b64 = base64.standard_b64encode(image_bytes).decode()
+    last = None
+    deadline = time.monotonic() + TOTAL_BUDGET_SECONDS
+
+    for attempt in range(MAX_ATTEMPTS):
+        if time.monotonic() >= deadline:
+            break
+        try:
+            return _generate_once(client, b64, mime_type)
+        except APIError as e:
+            if e.code == RATE_LIMIT_STATUS:
+                print(f"[image-to-prompt] rate limited: {e}", flush=True)
+                raise RuntimeError(RATE_LIMIT_MESSAGE) from e
+            if e.code not in RETRY_STATUSES:
+                raise
+            last = e
+            print(f"[image-to-prompt] {MODEL} unavailable ({e.code}): {e}", flush=True)
+
+        # Back off 1s, 2s, 4s — but never past the overall budget.
+        delay = 2 ** attempt
+        if attempt == MAX_ATTEMPTS - 1 or time.monotonic() + delay >= deadline:
+            break
+        time.sleep(delay)
+
+    raise RuntimeError(BUSY_MESSAGE) from last
 
 
 @app.route("/")
@@ -135,8 +200,15 @@ def generate():
     try:
         prompt_text = generate_prompt(image_bytes, mime)
         return jsonify({"prompt": prompt_text})
+    except RuntimeError as e:
+        # Our own "everything is busy" message — safe to show as-is.
+        return jsonify({"error": str(e)}), 503
+    except APIError as e:
+        print(f"[image-to-prompt] API error {e.code}: {e}", flush=True)
+        return jsonify({"error": f"Gemini returned an error ({e.code}). Please try again."}), 502
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"[image-to-prompt] unexpected: {type(e).__name__}: {e}", flush=True)
+        return jsonify({"error": "Something went wrong generating the prompt."}), 500
 
 
 if __name__ == "__main__":
@@ -146,9 +218,9 @@ if __name__ == "__main__":
 ║         Web Application              ║
 ╚══════════════════════════════════════╝
 
-Claude Code: Opus 4.7
+Claude Code: Opus 5
 Provider: Google Gemini API
-Model:    gemini-3.5-flash
+Model:    gemini-3.8-flash (free tier)
 
 Open http://localhost:5000 in your browser
 """)
