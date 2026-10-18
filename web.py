@@ -75,7 +75,12 @@ text or graphics printed on clothing.
 6. **Lighting** — Direction (state where the light/sun is, e.g., "low sun at the right edge \
 of the frame"), quality (soft/hard), color temperature, shadows.
 7. **Camera & Composition** — Shot type (close-up, medium, full body), angle, framing, how \
-the subjects are arranged in the frame, lens feel.
+the subjects are arranged in the frame, lens feel. State how much of the frame HEIGHT the \
+subject fills and where the head and feet fall (e.g., "the figure fills about 95% of the \
+frame height, top of the head just below the top edge, feet near the bottom edge, very \
+little headroom"). Generators default to pulling the camera back and shrinking the subject \
+with extra headroom and floor, so if the subject nearly fills the frame top to bottom, say \
+so explicitly and emphatically.
 8. **Style & Medium** — Photorealistic, illustration, anime, film stock look, etc.
 9. **Mood & Atmosphere** — Overall feeling, color palette, tone.
 
@@ -328,7 +333,7 @@ if __name__ == "__main__":
 ║         Web Application              ║
 ╚══════════════════════════════════════╝
 
-Claude Code: Opus 5
+Claude Code: Opus 5.5
 Provider: Google Gemini API
 Model:    gemini-3.8-flash (free tier)
 
