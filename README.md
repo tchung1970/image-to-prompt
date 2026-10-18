@@ -145,6 +145,9 @@ ways out, none currently taken: lower `MAX_ATTEMPTS`, fall back to a different m
   and their portrait counterparts)
 - Multi-subject scenes: counts people and describes each one individually
 - Pose-first prompting: front-loads body action, stance, and gesture for accurate poses
+- Frame-fill prompting: states how much of the frame height the subject fills and where
+  the head and feet fall, because generators otherwise pull the camera back and shrink
+  the subject with extra headroom and floor
 - Accurate eye color detection for portraits and close-ups
 - Upload progress bar
 - Responsive two-column layout (Catppuccin Mocha theme)
